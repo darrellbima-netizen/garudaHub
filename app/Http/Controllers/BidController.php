@@ -14,7 +14,7 @@ class BidController extends Controller
         $bids = Bid::with([
             'project',
             'developer'
-        ])->latest('created_at')->get();
+        ])->latest()->get();
 
         return response()->json($bids);
     }
@@ -34,24 +34,40 @@ class BidController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'project_id' => 'required|exists:projects,id',
+            'project_id' => [
+                'required',
+                'exists:projects,id',
+            ],
 
             'developer_id' => [
                 'required',
                 Rule::exists('users', 'id')
                     ->where('role', 'developer'),
+
+                Rule::unique('bids', 'developer_id')
+                    ->where(function ($query) use ($request) {
+                        return $query->where(
+                            'project_id',
+                            $request->input('project_id')
+                        );
+                    }),
             ],
 
             'harga' => 'required|integer|min:0',
             'durasi' => 'required|integer|min:1',
             'proposal' => 'required|string',
+        ], [
+            'developer_id.unique' =>
+                'Developer sudah mengirim penawaran untuk project ini.',
         ]);
 
         $bid = Bid::create($validated);
 
+        $bid->load(['project', 'developer']);
+
         return response()->json([
             'message' => 'Penawaran berhasil dibuat!',
-            'data' => $bid
+            'data' => $bid,
         ], 201);
     }
 
@@ -70,7 +86,10 @@ class BidController extends Controller
 
         return response()->json([
             'message' => 'Penawaran berhasil diperbarui!',
-            'data' => $bid->fresh()
+            'data' => $bid->fresh()->load([
+                'project',
+                'developer'
+            ]),
         ]);
     }
 
@@ -82,7 +101,7 @@ class BidController extends Controller
         $bid->delete();
 
         return response()->json([
-            'message' => 'Penawaran berhasil dihapus!'
+            'message' => 'Penawaran berhasil dihapus!',
         ]);
     }
 }
