@@ -1,67 +1,103 @@
-# Garuda-Hub
+# GarudaHub
 
-Website lelang proyek IT: klien memasang proyek, developer menawar, klien memilih pemenang. Dibuat untuk **studi kasus pembelajaran keamanan** mahasiswa dengan praktik PHP standar. Semua data adalah data dummy.
+GarudaHub adalah aplikasi web lelang proyek IT yang memungkinkan klien mempublikasikan proyek dan developer mengajukan penawaran. Aplikasi ini dikembangkan sebagai bagian dari tugas mata kuliah Pemrograman Berbasis Web.
 
-## PERINGATAN
+## Teknologi
 
-- **Hanya untuk komputer lokal atau lingkungan belajar.** Jangan dipasang di server publik atau internet.
-- Konfigurasi bawaan memakai database `root` dengan password kosong. Itu hanya aman di komputer lokal.
-- Tidak ada pembatasan percobaan login (rate limit).
-- Tidak ada header keamanan `X-Frame-Options` maupun `Content-Security-Policy`.
-- Jangan memasukkan data pribadi atau password asli.
+- **Backend:** Laravel
+- **Bahasa:** PHP
+- **Database:** PostgreSQL
+- **ORM:** Laravel Eloquent ORM
+- **API:** RESTful API
+- **Version Control:** Git dan GitHub
 
-## Fitur
+## Fitur Utama
 
-- Daftar dan login dengan peran klien, developer, admin
-- Klien memasang proyek (judul, deskripsi, kategori, budget, batas lelang)
-- Daftar, pencarian, dan detail proyek beserta penawaran
-- Developer mengajukan penawaran (harga, durasi, proposal)
-- Klien memilih pemenang
-- Dasbor per peran dan panel admin
+- Pengelolaan data proyek (CRUD).
+- Pengelolaan data penawaran atau bid (CRUD).
+- Relasi antara pengguna, proyek, dan penawaran.
+- Validasi data menggunakan Laravel.
+- Penggunaan foreign key dan constraint pada PostgreSQL.
 
-## Kebutuhan
+## Struktur Database
 
-- PHP 8.1 atau lebih baru dengan ekstensi `mysqli`
-- MySQL atau MariaDB
+GarudaHub menggunakan tiga tabel utama:
+
+- `users`: menyimpan data pengguna dan perannya.
+- `projects`: menyimpan informasi proyek yang dipublikasikan klien.
+- `bids`: menyimpan penawaran developer terhadap proyek.
+
+Relasi database:
+- Satu pengguna dengan peran klien dapat memiliki banyak proyek.
+- Satu proyek dapat memiliki banyak penawaran.
+- Satu pengguna dengan peran developer dapat memiliki banyak penawaran.
+- Setiap penawaran terhubung dengan satu proyek dan satu developer.
 
 ## Instalasi
 
-1. Klon repositori ini lalu masuk ke foldernya.
-2. Impor skema dan data dummy:
+1. Clone repository:
+   ```bash
+   git clone <URL_REPOSITORY>
    ```
-   mysql -u root -p < src/database.sql
+2. Masuk ke direktori project:
+   ```bash
+   cd garudaHub-git
    ```
-   Ini membuat database `garuda_hub` dan **menghapus** tabel `users`, `projects`, `bids` jika sudah ada.
-3. (Opsional) Atur koneksi database lewat variabel lingkungan:
-
-   | Variabel | Bawaan |
-   | --- | --- |
-   | `GH_DB_HOST` | `127.0.0.1` |
-   | `GH_DB_USER` | `root` |
-   | `GH_DB_PASS` | kosong |
-   | `GH_DB_NAME` | `garuda_hub` |
-   | `GH_DB_PORT` | `3306` |
-
-   Contoh: `export GH_DB_USER=nama_pengguna_anda`
-4. Jalankan server bawaan PHP:
+3. Install dependency:
+   ```bash
+   composer install
    ```
-   php -S localhost:8000 -t src
+4. Salin `.env.example` menjadi `.env`.
+5. Atur koneksi PostgreSQL pada `.env`:
+   ```env
+   DB_CONNECTION=pgsql
+   DB_HOST=127.0.0.1
+   DB_PORT=5432
+   DB_DATABASE=garuda_hub_pt2
+   DB_USERNAME=postgres
+   DB_PASSWORD=
    ```
-5. Buka `http://localhost:8000`.
+6. Generate application key:
+   ```bash
+   php artisan key:generate
+   ```
+7. Jalankan migration:
+   ```bash
+   php artisan migrate
+   ```
+8. Jalankan aplikasi:
+   ```bash
+   php artisan serve
+   ```
 
-## Akun dummy
+Aplikasi dapat diakses melalui `http://127.0.0.1:8000`.
 
-Data awal berisi akun fiktif berdomain `example.com`: satu admin (`admin@example.com`), klien (`budi@`, `siti@`, `agus@`), dan developer (`dewi@`, `eko@`, `fitri@`, `gilang@`). Password tidak dicantumkan di sini. Anda dapat mendaftar akun baru sebagai klien atau developer lewat halaman Daftar.
+## API Endpoints
 
-## Struktur
+### Projects
 
-- `src/index.php`: seluruh aplikasi (routing lewat `?page=`)
-- `src/database.sql`: skema dan data dummy
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| GET | `/api/projects` | Menampilkan semua proyek |
+| GET | `/api/projects/{id}` | Menampilkan detail proyek |
+| POST | `/api/projects` | Membuat proyek |
+| PUT/PATCH | `/api/projects/{id}` | Memperbarui proyek |
+| DELETE | `/api/projects/{id}` | Menghapus proyek |
 
-## Panduan pemakaian
+### Bids
 
-Lihat folder `docs/user/` bila tersedia.
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| GET | `/api/bids` | Menampilkan semua penawaran |
+| GET | `/api/bids/{id}` | Menampilkan detail penawaran |
+| POST | `/api/bids` | Membuat penawaran |
+| PUT/PATCH | `/api/bids/{id}` | Memperbarui penawaran |
+| DELETE | `/api/bids/{id}` | Menghapus penawaran |
 
-## Lisensi
+## Tujuan Pengembangan
 
-MIT. Lihat [LICENSE](LICENSE).
+Project ini berfokus pada:
+1. Redesain arsitektur database.
+2. Refactoring aplikasi menggunakan pola MVC Laravel.
+3. Implementasi ORM Eloquent untuk operasi CRUD.
+
