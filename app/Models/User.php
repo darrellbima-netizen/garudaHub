@@ -38,4 +38,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(Bid::class, 'developer_id');
     }
+    protected function casts(): array
+    {
+        return [
+            'password' => 'hashed',
+        ];
+    }
 }

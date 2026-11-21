@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class ProjectController extends Controller
 {
@@ -12,8 +11,8 @@ class ProjectController extends Controller
     public function index()
     {
         $projects = Project::with([
-            'client',
-            'bids.developer'
+            'client:id,nama,email,role',
+            'bids.developer:id,nama,email,role'
         ])->latest()->get();
 
         return response()->json($projects);
@@ -23,8 +22,8 @@ class ProjectController extends Controller
     public function show($id)
     {
         $project = Project::with([
-            'client',
-            'bids.developer'
+            'client:id,nama,email,role',
+            'bids.developer:id,nama,email,role'
         ])->findOrFail($id);
 
         return response()->json($project);
@@ -33,29 +32,26 @@ class ProjectController extends Controller
     // 3. Membuat project baru
     public function store(Request $request)
     {
+        $user = $request->user();
+
+        // Hanya klien yang boleh membuat project
+        abort_unless($user->role === 'klien', 403,
+            'Hanya klien yang dapat membuat project.');
+
         $validated = $request->validate([
-            'client_id' => [
-                'required',
-                Rule::exists('users', 'id')
-                    ->where('role', 'client'),
-            ],
-
-            'judul' => 'required|string|max:255',
-            'deskripsi' => 'required|string',
+            'judul' => 'required|string|max:200',
+            'deskripsi' => 'required|string|max:10000',
             'kategori' => 'required|string|max:50',
-
             'budget_min' => 'required|integer|min:0',
             'budget_max' => 'required|integer|gte:budget_min',
-
             'batas_lelang' => 'required|date|after_or_equal:today',
-
-            'status' => [
-                'required',
-                Rule::in(['terbuka', 'ditutup']),
-            ],
         ]);
 
-        $project = Project::create($validated);
+        // Identitas pemilik ditentukan server
+        $project = $user->projects()->create([
+            ...$validated,
+            'status' => 'terbuka',
+        ]);
 
         return response()->json([
             'message' => 'Project berhasil ditambahkan!',
@@ -66,29 +62,27 @@ class ProjectController extends Controller
     // 4. Memperbarui project
     public function update(Request $request, $id)
     {
+        $user = $request->user();
+
         $project = Project::findOrFail($id);
 
+        // Hanya pemilik atau admin yang boleh mengubah
+        abort_unless(
+            $user->role === 'admin' ||
+            ($user->role === 'klien' &&
+             $project->client_id === $user->id),
+            403,
+            'Anda tidak memiliki akses untuk mengubah project ini.'
+        );
+
         $validated = $request->validate([
-            'client_id' => [
-                'sometimes',
-                'required',
-                Rule::exists('users', 'id')
-                    ->where('role', 'client'),
-            ],
-
-            'judul' => 'sometimes|required|string|max:255',
-            'deskripsi' => 'sometimes|required|string',
+            'judul' => 'sometimes|required|string|max:200',
+            'deskripsi' => 'sometimes|required|string|max:10000',
             'kategori' => 'sometimes|required|string|max:50',
-
             'budget_min' => 'sometimes|required|integer|min:0',
             'budget_max' => 'sometimes|required|integer|min:0',
-
-            'batas_lelang' => 'sometimes|required|date',
-            'status' => [
-                'sometimes',
-                'required',
-                Rule::in(['terbuka', 'ditutup']),
-            ],
+            'batas_lelang' => 'sometimes|required|date|after_or_equal:today',
+            'status' => 'sometimes|required|in:terbuka,ditutup',
         ]);
 
         $budgetMin = $validated['budget_min']
@@ -103,6 +97,7 @@ class ProjectController extends Controller
             ], 422);
         }
 
+        // client_id tidak bisa diubah melalui request
         $project->update($validated);
 
         return response()->json([
@@ -112,9 +107,20 @@ class ProjectController extends Controller
     }
 
     // 5. Menghapus project
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
+        $user = $request->user();
+
         $project = Project::findOrFail($id);
+
+        // Hanya pemilik atau admin yang boleh menghapus
+        abort_unless(
+            $user->role === 'admin' ||
+            ($user->role === 'klien' &&
+             $project->client_id === $user->id),
+            403,
+            'Anda tidak memiliki akses untuk menghapus project ini.'
+        );
 
         $project->delete();
 
